@@ -85,7 +85,7 @@ public class UserDao {
                     .getSingleResult();
 
         } catch (NoResultException e) {
-            System.out.println(e.toString());
+            System.err.println(e.toString());
         }
 
         return userEntity;

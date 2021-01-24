@@ -98,6 +98,20 @@ public class RestExceptionHandler {
     }
 
     /**
+     * This method is invoked when AnswerNotFoundException thrown and relevant error code and error message
+     *
+     * @param exception
+     * @param request
+     * @return ErrorResponse
+     */
+    @ExceptionHandler(AnswerNotFoundException.class)
+    public ResponseEntity<ErrorResponse> answerNotFoundException(
+            AnswerNotFoundException exception, WebRequest request) {
+        return new ResponseEntity<ErrorResponse>(new ErrorResponse().code(exception.getCode()).message(exception.getErrorMessage()).rootCause(getClassName(exception.toString())),
+                HttpStatus.NOT_FOUND);
+    }
+
+    /**
      * This method will extract class name from the exception string to avoid exposing entire package name
      * in rest api response
      *
