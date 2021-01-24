@@ -78,9 +78,23 @@ public class RestExceptionHandler {
      */
     @ExceptionHandler(SignOutRestrictedException.class)
     public ResponseEntity<ErrorResponse> authorizationFailedException(
-            SignOutRestrictedException exception, WebRequest request) {
+                    SignOutRestrictedException exception, WebRequest request) {
         return new ResponseEntity<ErrorResponse>(new ErrorResponse().code(exception.getCode()).message(exception.getErrorMessage()).rootCause(getClassName(exception.toString())),
                 HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * This method is invoked when InvalidQuestionException thrown and relevant error code and error message
+     *
+     * @param exception
+     * @param request
+     * @return ErrorResponse
+     */
+    @ExceptionHandler(InvalidQuestionException.class)
+    public ResponseEntity<ErrorResponse> invalidQuestionException(
+            InvalidQuestionException exception, WebRequest request) {
+        return new ResponseEntity<ErrorResponse>(new ErrorResponse().code(exception.getCode()).message(exception.getErrorMessage()).rootCause(getClassName(exception.toString())),
+                HttpStatus.NOT_FOUND);
     }
 
     /**
