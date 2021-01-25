@@ -1,6 +1,7 @@
 package com.upgrad.quora.service.dao;
 
 import com.upgrad.quora.service.entity.QuestionEntity;
+import com.upgrad.quora.service.entity.UserEntity;
 import com.upgrad.quora.service.exception.InvalidQuestionException;
 import org.springframework.stereotype.Repository;
 
@@ -60,12 +61,13 @@ public class QuestionDao {
 
     }
 
-    public List<QuestionEntity> getAllQuestionsbyUser(String userId) {
+    public List<QuestionEntity> getAllQuestionsbyUser(final UserEntity userEntity) {
         List<QuestionEntity> questionEntity = null;
 
         try {
             questionEntity = entityManager
-                    .createNamedQuery("getAllQuestionsById", QuestionEntity.class)
+                    .createNamedQuery("getAllQuestionByUser", QuestionEntity.class)
+                    .setParameter("user", userEntity)
                     .getResultList();
 
         } catch (NoResultException e) {
@@ -77,7 +79,6 @@ public class QuestionDao {
     }
 
     public QuestionEntity editQuestion(QuestionEntity questionEntity) {
-
         entityManager.merge(questionEntity);
         return questionEntity;
 

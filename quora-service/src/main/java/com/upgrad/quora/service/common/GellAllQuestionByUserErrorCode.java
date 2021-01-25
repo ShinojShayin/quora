@@ -12,7 +12,9 @@ public enum GellAllQuestionByUserErrorCode implements ErrorCode {
      * <b>Cause:</b> If the user has signed out.<br>
      * <b>Action: User has been signed out need to re-login to get the access again</b><br>
      */
-    ATHR_002_GETALLQUESTIONBYUSER_PROMPT("ATHR-002", "User is signed out.Sign in first to get all questions posted by a specific user");
+    ATHR_002_GETALLQUESTIONBYUSER_PROMPT("ATHR-002", "User is signed out.Sign in first to get all questions posted by a specific user"),
+
+    USR_001("USR-001", "User with entered uuid whose question details are to be seen does not exist");
 
 
     private static final Map<String, GellAllQuestionByUserErrorCode> LOOKUP =

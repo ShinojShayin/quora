@@ -44,7 +44,7 @@ public class AnswerService {
     @Transactional(propagation = Propagation.REQUIRED)
     public AnswerEntity addAnswer(AnswerEntity reqAnswerEntity) throws InvalidQuestionException {
         // Validate UUID of the question using Question DAO
-        QuestionEntity questionEntity = questionDao.getQuestionByUuid(reqAnswerEntity.getQuestionEntity().getUuid());
+        QuestionEntity questionEntity = questionDao.getQuestionById(reqAnswerEntity.getQuestionEntity().getUuid());
         if (questionEntity == null){
             throw new InvalidQuestionException(AnswerCreationErrorCode.QUES_001.getCode(), AnswerCreationErrorCode.QUES_001.getDefaultMessage());
         }
@@ -99,7 +99,7 @@ public class AnswerService {
 
     public List<AnswerEntity> getAllAnswer(QuestionEntity answerEntity) throws InvalidQuestionException {
         // Validate UUID of the question using Question DAO
-        QuestionEntity questionEntity = questionDao.getQuestionByUuid(answerEntity.getUuid());
+        QuestionEntity questionEntity = questionDao.getQuestionById(answerEntity.getUuid());
         if (questionEntity == null){
             throw new InvalidQuestionException(AnswerGetAllErrorCode.QUES_001.getCode(), AnswerGetAllErrorCode.QUES_001.getDefaultMessage());
         }

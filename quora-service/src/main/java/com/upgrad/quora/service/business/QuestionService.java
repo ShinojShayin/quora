@@ -1,16 +1,15 @@
 package com.upgrad.quora.service.business;
 
-import com.upgrad.quora.service.common.AuthErrorCode;
-import com.upgrad.quora.service.common.QuestionDeleteErrorCode;
-import com.upgrad.quora.service.common.QuestionEditErrorCode;
-import com.upgrad.quora.service.common.UserRole;
+import com.upgrad.quora.service.common.*;
 import com.upgrad.quora.service.dao.QuestionDao;
 import com.upgrad.quora.service.dao.UserAuthDao;
 import com.upgrad.quora.service.dao.UserDao;
 import com.upgrad.quora.service.entity.QuestionEntity;
 import com.upgrad.quora.service.entity.UserAuthEntity;
+import com.upgrad.quora.service.entity.UserEntity;
 import com.upgrad.quora.service.exception.AuthorizationFailedException;
 import com.upgrad.quora.service.exception.InvalidQuestionException;
+import com.upgrad.quora.service.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -48,20 +47,18 @@ public class QuestionService {
      * @throws InvalidQuestionException
      */
     @Transactional(propagation = Propagation.REQUIRED)
-    public QuestionEntity deleteQuestion(String questionId) throws InvalidQuestionException {
-        QuestionEntity questionEntity = questionDao.getQuestionById(questionId);
-        try {
-            if (questionEntity != null) {
-                return questionDao.deleteQuestion(questionEntity);
-            }
-            return questionEntity;
-        } catch (InvalidQuestionException invalidQuestionException) {
-            if (invalidQuestionException.getCode().equals(QuestionDeleteErrorCode.QUES_001_DELETEQUESTION_ACCESS.getCode())) {
-                throw new InvalidQuestionException(QuestionDeleteErrorCode.QUES_001_DELETEQUESTION_ACCESS.getCode(), QuestionDeleteErrorCode.QUES_001_DELETEQUESTION_ACCESS.getDefaultMessage());
-            }
+    public QuestionEntity deleteQuestion(String questionId, String authorization) throws InvalidQuestionException, AuthorizationFailedException {
 
+        QuestionEntity questionEntity = questionDao.getQuestionById(questionId);
+
+        if (questionEntity != null) {
+            validateUserForDelete(authorization, questionEntity);
+            return questionDao.deleteQuestion(questionEntity);
         }
-        return questionEntity;
+        else{
+            throw new InvalidQuestionException(QuestionDeleteErrorCode.QUES_001_DELETEQUESTION_ACCESS.getCode(), QuestionDeleteErrorCode.QUES_001_DELETEQUESTION_ACCESS.getDefaultMessage());
+        }
+
     }
 
     /**
@@ -73,21 +70,22 @@ public class QuestionService {
      * @return UserAuthEntity
      * @throws AuthorizationFailedException
      */
-    public UserAuthEntity validateUserForDelete(String authorization) throws AuthorizationFailedException {
+    public UserAuthEntity validateUserForDelete(String authorization, QuestionEntity questionEntity) throws AuthorizationFailedException {
         UserAuthEntity userAuthEntity = userAuthDao.getUserAuthByAccessToken(authorization);
 
         if (userAuthEntity == null)
             throw new AuthorizationFailedException(AuthErrorCode.ATHR_001.getCode(), AuthErrorCode.ATHR_001.getDefaultMessage());
 
-        if (!userAuthEntity.getUserEntity().getRole().equals(UserRole.ADMIN.getName()))
-            throw new AuthorizationFailedException(QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getCode(), QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getDefaultMessage());
-
         ZonedDateTime logoutAt = userAuthEntity.getLogoutAt();
 
         // if logoutAt is not null then it means user has signed out.
-        if (logoutAt != null) {
+        if (logoutAt != null)
             throw new AuthorizationFailedException(AuthErrorCode.ATHR_002.getCode(), AuthErrorCode.ATHR_002.getDefaultMessage());
-        } else {
+
+
+        if (!userAuthEntity.getUserEntity().getRole().equals(UserRole.ADMIN.getName())  && !userAuthEntity.getUserEntity().getUuid().equals(questionEntity.getUserEntity().getUuid()))
+            throw new AuthorizationFailedException(QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getCode(), QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getDefaultMessage());
+        else {
             return userAuthEntity;
         }
     }
@@ -114,34 +112,40 @@ public class QuestionService {
             throw new AuthorizationFailedException(AuthErrorCode.ATHR_002.getCode(), AuthErrorCode.ATHR_002.getDefaultMessage());
         }
 
-        if (!userAuthEntity.getUserEntity().getRole().equals(UserRole.ADMIN.getName()) &&
-                !userAuthEntity.getUserEntity().getUuid().equals(questionEntity.getUserEntity().getUuid()))
+        if (!userAuthEntity.getUserEntity().getUuid().equals(questionEntity.getUserEntity().getUuid()))
             throw new AuthorizationFailedException(QuestionEditErrorCode.ATHR_003_EDITQUESTION_ACCESS.getCode(), QuestionEditErrorCode.ATHR_003_EDITQUESTION_ACCESS.getDefaultMessage());
         else {
             return userAuthEntity;
         }
     }
 
+
     /**
      * This method will accept Edited QuestionEntity object
-     * and finally return QuestionEntity along with uuid.
+     *  and finally return QuestionEntity along with uuid.
      *
-     * @param questionEntity
-     * @return questionEntity
+     * @param questionId
+     * @param content
+     * @param authorization
+     * @return QuestionEntity
+     * @throws InvalidQuestionException
+     * @throws AuthorizationFailedException
      */
     @Transactional(propagation = Propagation.REQUIRED)
-    public QuestionEntity editQuestion(String questionId, QuestionEntity questionEntity) throws InvalidQuestionException  {
-        QuestionEntity question = questionDao.getQuestionById(questionId);
+    public QuestionEntity editQuestion( String questionId, String content, String authorization) throws InvalidQuestionException, AuthorizationFailedException {
 
-            if (question != null) {
-                questionEntity.setUuid(question.getUuid());
-                questionEntity.setId(question.getId());
-                return questionDao.editQuestion(questionEntity);
-            }
-            else{
-                throw new InvalidQuestionException(QuestionEditErrorCode.QUES_001_EDITQUESTION_ACCESS.getCode(), QuestionEditErrorCode.QUES_001_EDITQUESTION_ACCESS.getDefaultMessage());
+        QuestionEntity questionEntity = questionDao.getQuestionById(questionId);
 
-            }
+        if (questionEntity != null) {
+            validateUserForEdit(authorization, questionEntity);
+            questionEntity.setContent(content);
+            questionEntity.setDate(ZonedDateTime.now());
+            return questionDao.editQuestion(questionEntity);
+        }
+        else{
+            throw new InvalidQuestionException(QuestionEditErrorCode.QUES_001_EDITQUESTION_ACCESS.getCode(), QuestionEditErrorCode.QUES_001_EDITQUESTION_ACCESS.getDefaultMessage());
+
+        }
 
     }
     /**
@@ -164,7 +168,13 @@ public class QuestionService {
      */
 
     @Transactional(propagation = Propagation.REQUIRED)
-    public List<QuestionEntity> getAllQuestionsByUser(String userId) {
-        return questionDao.getAllQuestionsbyUser(userId);
+    public List<QuestionEntity> getAllQuestionsByUser(String userId) throws UserNotFoundException {
+        UserEntity userEntity = userDao.getUserById(userId);
+        if(userEntity!=null){
+            return questionDao.getAllQuestionsbyUser(userEntity);
+        }
+        else{
+            throw new UserNotFoundException(GellAllQuestionByUserErrorCode.USR_001.getCode(), GellAllQuestionByUserErrorCode.USR_001.getDefaultMessage());
+        }
     }
 }

@@ -12,6 +12,7 @@ import com.upgrad.quora.service.entity.UserAuthEntity;
 import com.upgrad.quora.service.exception.AuthenticationFailedException;
 import com.upgrad.quora.service.exception.AuthorizationFailedException;
 import com.upgrad.quora.service.exception.InvalidQuestionException;
+import com.upgrad.quora.service.exception.UserNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -83,7 +84,7 @@ public class QuestionController {
      * @throws InvalidQuestionException
      */
     @RequestMapping(method = RequestMethod.DELETE, path = "/question/delete/{questionId}",produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<QuestionResponse> deleteQuestion(@PathVariable("uuid") String questionId,@RequestHeader("authorization") final String authorization) throws AuthorizationFailedException,InvalidQuestionException  {
+    public ResponseEntity<QuestionResponse> deleteQuestion(@PathVariable("questionId") String questionId,@RequestHeader("authorization") final String authorization) throws AuthorizationFailedException,InvalidQuestionException  {
         UserAuthEntity userAuth = null;
         try {
             // Verify 'authorization' in header, if not valid it will throw exception
@@ -93,16 +94,10 @@ public class QuestionController {
             if ( authorizationFailedException.getCode().equals(QuestionDeleteErrorCode.ATHR_002_DELETEQUESTION_PROMPT.getCode())){
                 throw new AuthorizationFailedException(QuestionDeleteErrorCode.ATHR_002_DELETEQUESTION_PROMPT.getCode(), QuestionDeleteErrorCode.ATHR_002_DELETEQUESTION_PROMPT.getDefaultMessage());
             }
-            if ( authorizationFailedException.getCode().equals(QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getCode())){
-                throw new AuthorizationFailedException(QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getCode(), QuestionDeleteErrorCode.ATHR_003_DELETEQUESTION_ACCESS.getDefaultMessage());
-            }
-            else if ( authorizationFailedException.getCode().equals(AuthErrorCode.USR_001.getCode())){
-                throw new AuthorizationFailedException(AuthErrorCode.USR_001.getCode(), AuthErrorCode.USR_001.getDefaultMessage());
-            }
             throw authorizationFailedException;
         }
-        questionService.validateUserForDelete(authorization);
-        QuestionEntity respQuestionEntity = questionService.deleteQuestion(questionId);
+
+        QuestionEntity respQuestionEntity = questionService.deleteQuestion(questionId, authorization);
 
         QuestionResponse questionResponse = new QuestionResponse();
         questionResponse.id(respQuestionEntity.getUuid());
@@ -131,24 +126,11 @@ public class QuestionController {
             if ( authorizationFailedException.getCode().equals(QuestionEditErrorCode.ATHR_002_EDITQUESTION_PROMPT.getCode())){
                 throw new AuthorizationFailedException(QuestionEditErrorCode.ATHR_002_EDITQUESTION_PROMPT.getCode(), QuestionEditErrorCode.ATHR_002_EDITQUESTION_PROMPT.getDefaultMessage());
             }
-//            if ( authorizationFailedException.getCode().equals(QuestionEditErrorCode.ATHR_003_EDITQUESTION_ACCESS.getCode())){
-//                throw new AuthorizationFailedException(QuestionEditErrorCode.ATHR_003_EDITQUESTION_ACCESS.getCode(), QuestionEditErrorCode.ATHR_003_EDITQUESTION_ACCESS.getDefaultMessage());
-//            }
-//            else if ( authorizationFailedException.getCode().equals(AuthErrorCode.USR_001.getCode())){
-//                throw new AuthorizationFailedException(AuthErrorCode.USR_001.getCode(), AuthErrorCode.USR_001.getDefaultMessage());
-//            }
             throw authorizationFailedException;
         }
 
-
-        QuestionEntity questionEntity = new QuestionEntity();
-        questionEntity.setContent(questionEditRequest.getContent());
-        questionEntity.setUserEntity(userAuth.getUserEntity());
-        questionEntity.setDate(ZonedDateTime.now());
-     //   questionEntity.setUuid(UUID.randomUUID().toString());
-        questionService.validateUserForEdit(authorization, questionEntity);
-
-        QuestionEntity respQuestionEntity = questionService.editQuestion(questionId, questionEntity);
+        QuestionEntity respQuestionEntity = questionService.editQuestion(questionId, questionEditRequest.getContent(),
+                authorization);
 
         QuestionResponse questionResponse = new QuestionResponse();
         questionResponse.id(respQuestionEntity.getUuid());
@@ -166,7 +148,7 @@ public class QuestionController {
      * @throws InvalidQuestionException
      */
     @RequestMapping(method = RequestMethod.GET, path = "/question/all",produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public List<ResponseEntity<QuestionDetailsResponse>> getAllQuestions(@RequestHeader("authorization") final String authorization) throws AuthorizationFailedException,InvalidQuestionException  {
+    public ResponseEntity<List<QuestionDetailsResponse>> getAllQuestions(@RequestHeader("authorization") final String authorization) throws AuthorizationFailedException,InvalidQuestionException  {
         UserAuthEntity userAuth = null;
         try {
             // Verify 'authorization' in header, if not valid it will throw exception
@@ -183,32 +165,32 @@ public class QuestionController {
         }
 
         List<QuestionEntity> respQuestionEntity = questionService.getAllQuestions();
+        final List<QuestionDetailsResponse> questionResponseList = new ArrayList<>();
 
-        List<ResponseEntity<QuestionDetailsResponse>> questionResponse =new ArrayList<ResponseEntity<QuestionDetailsResponse>>() ;
-  for(QuestionEntity res : respQuestionEntity){
-
-      QuestionDetailsResponse response =
-              new QuestionDetailsResponse()
-                      .id(res.getUuid())
-              .content(res.getContent());
-      questionResponse.add(new ResponseEntity<QuestionDetailsResponse>(response, HttpStatus.OK));
-  }
-
-        return questionResponse;
+        for (QuestionEntity question : respQuestionEntity) {
+            String uuid = question.getUuid();
+            String content = question.getContent();
+            questionResponseList.add(new QuestionDetailsResponse().id(uuid).content(content));
+        }
+        return new ResponseEntity<List<QuestionDetailsResponse>>(questionResponseList, HttpStatus.OK);
 
     }
 
     /**
      * Endpoint to fetch all questions created by user
-     * @param authorization
+     *
      * @param userId
-     * @return QuestionResponse
-     * @throws AuthenticationFailedException
+     * @param authorization
+     * @return QuestionDetailsResponse
+     * @throws AuthorizationFailedException
      * @throws InvalidQuestionException
+     * @throws UserNotFoundException
      */
-    @RequestMapping(method = RequestMethod.GET, path = "question/all/{userId}",produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public List<ResponseEntity<QuestionDetailsResponse>> getAllQuestionsByUser(@RequestHeader("authorization") final String authorization, @PathVariable("user_id") String userId ) throws AuthorizationFailedException,InvalidQuestionException  {
+    @RequestMapping(method = RequestMethod.GET, path = "/question/all/{userId}",produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    public ResponseEntity<List<QuestionDetailsResponse>> getAllQuestionsByUser(@PathVariable("userId") String userId, @RequestHeader("authorization") final String authorization)
+            throws AuthorizationFailedException, InvalidQuestionException, UserNotFoundException {
         UserAuthEntity userAuth = null;
+        System.out.println(userId);
         try {
             // Verify 'authorization' in header, if not valid it will throw exception
             userAuth = commonService.validateUser(authorization);
@@ -217,25 +199,22 @@ public class QuestionController {
             if ( authorizationFailedException.getCode().equals(GellAllQuestionByUserErrorCode.ATHR_002_GETALLQUESTIONBYUSER_PROMPT.getCode())){
                 throw new AuthorizationFailedException(GellAllQuestionByUserErrorCode.ATHR_002_GETALLQUESTIONBYUSER_PROMPT.getCode(), GellAllQuestionByUserErrorCode.ATHR_002_GETALLQUESTIONBYUSER_PROMPT.getDefaultMessage());
             }
-            else if ( authorizationFailedException.getCode().equals(AuthErrorCode.USR_001.getCode())){
-                throw new AuthorizationFailedException(AuthErrorCode.USR_001.getCode(), AuthErrorCode.USR_001.getDefaultMessage());
-            }
+
             throw authorizationFailedException;
         }
 
         List<QuestionEntity> respQuestionEntity = questionService.getAllQuestionsByUser(userId);
 
-        List<ResponseEntity<QuestionDetailsResponse>> questionResponse =new ArrayList<ResponseEntity<QuestionDetailsResponse>>() ;
-        for(QuestionEntity res : respQuestionEntity){
-
-            QuestionDetailsResponse response =
-                    new QuestionDetailsResponse()
-                            .id(res.getUuid())
-                            .content(res.getContent());
-            questionResponse.add(new ResponseEntity<QuestionDetailsResponse>(response, HttpStatus.OK));
+        List<QuestionDetailsResponse> questionDetailResponses = new ArrayList<>();
+        for (QuestionEntity questionEntity : respQuestionEntity) {
+            QuestionDetailsResponse questionDetailResponse = new QuestionDetailsResponse();
+            questionDetailResponse.setId(questionEntity.getUuid());
+            questionDetailResponse.setContent(questionEntity.getContent());
+            questionDetailResponses.add(questionDetailResponse);
         }
 
-        return questionResponse;
+        return new ResponseEntity<List<QuestionDetailsResponse>>(
+                questionDetailResponses, HttpStatus.OK);
 
     }
 
