@@ -90,7 +90,7 @@ public class AnswerService {
 
         // Enforce the authorization policy for edit answer as only the creator or answer should be able to modiy it
         UserEntity dbUserEntity = userDao.getUserById(dbAnswerEntity.getUserEntity().getUuid());
-        if (!dbAnswerEntity.getUserEntity().getUuid().equals(userEntity.getUuid()) || !userEntity.getRole().equals(UserRole.ADMIN.getName())){
+        if (!dbAnswerEntity.getUserEntity().getUuid().equals(userEntity.getUuid()) && !userEntity.getRole().equals(UserRole.ADMIN.getName())){
             throw new AuthorizationFailedException(AnswerDeleteErrorCode.ATHR_003.getCode(), AnswerDeleteErrorCode.ATHR_003.getDefaultMessage());
         }
 
