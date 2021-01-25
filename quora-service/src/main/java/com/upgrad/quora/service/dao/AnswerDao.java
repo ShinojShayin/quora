@@ -1,11 +1,14 @@
 package com.upgrad.quora.service.dao;
 
 import com.upgrad.quora.service.entity.AnswerEntity;
+import com.upgrad.quora.service.entity.QuestionEntity;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
+import javax.persistence.TypedQuery;
+import java.util.List;
 
 @Repository
 public class AnswerDao {
@@ -44,6 +47,26 @@ public class AnswerDao {
     public AnswerEntity deleteAnswer(AnswerEntity answerEntity) {
         if (answerEntity != null) {
             entityManager.remove(answerEntity);
+        }
+        return answerEntity;
+    }
+
+    public List<AnswerEntity> getAnswersByQuestionId(QuestionEntity questionEntity) {
+
+        List<AnswerEntity> answerEntity = null;
+        System.out.println("questionEntity \n" + questionEntity);
+        try {
+            TypedQuery<AnswerEntity> queryObject = entityManager
+                    .createNamedQuery("answerByQuestionId", AnswerEntity.class)
+                    .setParameter("questionId", questionEntity.getId());
+            System.out.println(queryObject);
+            answerEntity = queryObject.getResultList();
+
+//            answerEntity = entityManager.createNativeQuery("SELECT * FROM answer where question_id = " + questionEntity.getId(), AnswerEntity.class)
+//                    .getResultList();
+
+        } catch (NoResultException e) {
+            System.err.println(e.toString());
         }
         return answerEntity;
     }

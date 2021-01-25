@@ -33,7 +33,7 @@ public class AnswerController {
     /**
      * Endpoint for create answer for particular question
      * @param questionId
-     * @param authorization
+     * @param accessToken
      * @param answerRequest
      * @return AnswerResponse
      * @throws InvalidQuestionException
@@ -101,21 +101,37 @@ public class AnswerController {
 
     /**
      *
-     * @param questionUuid
-     * @param authorization
+     * @param questionId
+     * @param accessToken
      * @return
      * @throws AuthorizationFailedException
      * @throws UserNotFoundException
+     * @throws InvalidQuestionException
      */
     @RequestMapping(method = RequestMethod.GET, path = "/answer/all/{questionId}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<List<AnswerResponse>> getAllAnswersToQuestion (@PathVariable("questionId") final String questionId,
-            @RequestHeader("authorization") final String accessToken) throws AuthorizationFailedException, UserNotFoundException {
+    public ResponseEntity<List<AnswerDetailsResponse>> getAllAnswersToQuestion (@PathVariable("questionId") final String questionId,
+            @RequestHeader("authorization") final String accessToken) throws AuthorizationFailedException, UserNotFoundException, InvalidQuestionException {
 
-        checkForAuthorization(accessToken, AnswerDeleteErrorCode.ATHR_002.getCode(), AnswerDeleteErrorCode.ATHR_002.getDefaultMessage());
+        UserAuthEntity userAuth = checkForAuthorization(accessToken, AnswerDeleteErrorCode.ATHR_002.getCode(), AnswerDeleteErrorCode.ATHR_002.getDefaultMessage());
 
-        List<AnswerResponse> allAnswers = new ArrayList<>();
+        // Set UUID of question using input questionId
+        QuestionEntity questionEntity = new QuestionEntity();
+        questionEntity.setUuid(questionId);
+        questionEntity.setUserEntity(userAuth.getUserEntity());
 
-        return new ResponseEntity<List<AnswerResponse>>(allAnswers, HttpStatus.OK);
+        List<AnswerEntity> allAnswerEntity = answerService.getAllAnswer(questionEntity);
+
+        List<AnswerDetailsResponse> allAnswers = new ArrayList<>();
+        for (AnswerEntity answerEntity: allAnswerEntity){
+            AnswerDetailsResponse answerResponse = new AnswerDetailsResponse();
+            answerResponse.setId(answerEntity.getUuid());
+            answerResponse.setAnswerContent(answerEntity.getAnswer());
+            answerResponse.setQuestionContent(answerEntity.getQuestionEntity().getContent());
+            allAnswers.add(answerResponse);
+        }
+
+
+        return new ResponseEntity<>(allAnswers, HttpStatus.OK);
     }
 
     private UserAuthEntity checkForAuthorization(String accessToken, String errorCode, String defaultMessage) throws AuthorizationFailedException {

@@ -31,7 +31,7 @@ public class QuestionEntity implements Serializable {
 
     @Column(name = "content")
     @NotNull
-    private String answer;
+    private String content;
 
     @Column(name = "date")
     @NotNull
@@ -57,7 +57,7 @@ public class QuestionEntity implements Serializable {
         return "QuestionEntity{" +
                 "id=" + id +
                 ", uuid='" + uuid + '\'' +
-                ", answer='" + answer + '\'' +
+                ", content='" + content + '\'' +
                 ", date='" + date + '\'' +
                 ", userEntity=" + userEntity +
                 '}';
@@ -79,12 +79,12 @@ public class QuestionEntity implements Serializable {
         this.uuid = uuid;
     }
 
-    public String getAnswer() {
-        return answer;
+    public String getContent() {
+        return content;
     }
 
-    public void setAnswer(String answer) {
-        this.answer = answer;
+    public void setContent(String content) {
+        this.content = content;
     }
 
     public ZonedDateTime getDate() {

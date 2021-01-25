@@ -1,9 +1,6 @@
 package com.upgrad.quora.service.business;
 
-import com.upgrad.quora.service.common.AnswerCreationErrorCode;
-import com.upgrad.quora.service.common.AnswerDeleteErrorCode;
-import com.upgrad.quora.service.common.AnswerEditErrorCode;
-import com.upgrad.quora.service.common.UserRole;
+import com.upgrad.quora.service.common.*;
 import com.upgrad.quora.service.dao.AnswerDao;
 import com.upgrad.quora.service.dao.QuestionDao;
 import com.upgrad.quora.service.dao.UserDao;
@@ -19,6 +16,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -96,5 +94,14 @@ public class AnswerService {
         }
 
         return answerDao.deleteAnswer(dbAnswerEntity);
+    }
+
+    public List<AnswerEntity> getAllAnswer(QuestionEntity answerEntity) throws InvalidQuestionException {
+        // Validate UUID of the question using Question DAO
+        QuestionEntity questionEntity = questionDao.getQuestionByUuid(answerEntity.getUuid());
+        if (questionEntity == null){
+            throw new InvalidQuestionException(AnswerGetAllErrorCode.QUES_001.getCode(), AnswerGetAllErrorCode.QUES_001.getDefaultMessage());
+        }
+        return answerDao.getAnswersByQuestionId(questionEntity);
     }
 }
