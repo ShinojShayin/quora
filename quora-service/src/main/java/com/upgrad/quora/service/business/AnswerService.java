@@ -78,6 +78,7 @@ public class AnswerService {
         return answerDao.editAnswer(answerEntity);
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     public AnswerEntity deleteAnswer(String answerId, UserEntity userEntity) throws AnswerNotFoundException, AuthorizationFailedException {
 
         // Check whether answer for edit content is valid or not
