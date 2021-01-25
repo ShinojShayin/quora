@@ -43,7 +43,7 @@ public class AnswerController {
      */
     @RequestMapping(method = RequestMethod.POST, path = "/question/{questionId}/answer/create", consumes = MediaType.APPLICATION_JSON_UTF8_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<AnswerResponse> createAnswer(@PathVariable("questionId") final String questionId,
-                                                           @RequestHeader("authorization") final String authorization, AnswerRequest answerRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException {
+                                                           @RequestHeader("authorization") final String authorization, @RequestBody AnswerRequest answerRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException {
         UserAuthEntity userAuth = null;
         try {
             // Verify 'authorization' in header is valid or not, if not valid it will throw exception
@@ -55,7 +55,6 @@ public class AnswerController {
             }
             throw authorizationFailedException;
         }
-
         AnswerEntity answerEntity = new AnswerEntity();
         answerEntity.setAnswer(answerRequest.getAnswer());
         answerEntity.setUserEntity(userAuth.getUserEntity());
@@ -77,7 +76,7 @@ public class AnswerController {
 
     @RequestMapping(method = RequestMethod.PUT, path = "/answer/edit/{answerId}", consumes = MediaType.APPLICATION_JSON_UTF8_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<AnswerResponse> editAnswer(@PathVariable("answerId") final String answerId,
-                                                       @RequestHeader("authorization") final String authorization, AnswerEditRequest answerEditRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException, AnswerNotFoundException {
+                                                       @RequestHeader("authorization") final String authorization, @RequestBody AnswerEditRequest answerEditRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException, AnswerNotFoundException {
         UserAuthEntity userAuth = null;
         try {
             // Verify 'authorization' in header is valid or not, if not valid it will throw exception
