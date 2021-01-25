@@ -1,7 +1,9 @@
 package com.upgrad.quora.service.business;
 
 import com.upgrad.quora.service.common.AnswerCreationErrorCode;
+import com.upgrad.quora.service.common.AnswerDeleteErrorCode;
 import com.upgrad.quora.service.common.AnswerEditErrorCode;
+import com.upgrad.quora.service.common.UserRole;
 import com.upgrad.quora.service.dao.AnswerDao;
 import com.upgrad.quora.service.dao.QuestionDao;
 import com.upgrad.quora.service.dao.UserDao;
@@ -71,9 +73,28 @@ public class AnswerService {
         }
 
         answerEntity.setQuestionEntity(dbAnswerEntity.getQuestionEntity());
+        answerEntity.setId(dbAnswerEntity.getId());
         ZonedDateTime now = ZonedDateTime.now();
         answerEntity.setDate(now);
 
         return answerDao.editAnswer(answerEntity);
+    }
+
+    public AnswerEntity deleteAnswer(String answerId, UserEntity userEntity) throws AnswerNotFoundException, AuthorizationFailedException {
+
+        // Check whether answer for edit content is valid or not
+        AnswerEntity dbAnswerEntity = answerDao.getAnswerById(answerId);
+
+        if (dbAnswerEntity == null){
+            throw new AnswerNotFoundException(AnswerEditErrorCode.ANS_001.getCode(), AnswerEditErrorCode.ANS_001.getDefaultMessage());
+        }
+
+        // Enforce the authorization policy for edit answer as only the creator or answer should be able to modiy it
+        UserEntity dbUserEntity = userDao.getUserById(dbAnswerEntity.getUserEntity().getUuid());
+        if (!dbAnswerEntity.getUserEntity().getUuid().equals(userEntity.getUuid()) || !userEntity.getRole().equals(UserRole.ADMIN.getName())){
+            throw new AuthorizationFailedException(AnswerDeleteErrorCode.ATHR_003.getCode(), AnswerDeleteErrorCode.ATHR_003.getDefaultMessage());
+        }
+
+        return answerDao.deleteAnswer(dbAnswerEntity);
     }
 }

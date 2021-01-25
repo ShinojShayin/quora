@@ -40,4 +40,11 @@ public class AnswerDao {
     public AnswerEntity editAnswer(AnswerEntity answerEntity) {
         return  entityManager.merge(answerEntity);
     }
+
+    public AnswerEntity deleteAnswer(AnswerEntity answerEntity) {
+        if (answerEntity != null) {
+            entityManager.remove(answerEntity);
+        }
+        return answerEntity;
+    }
 }
