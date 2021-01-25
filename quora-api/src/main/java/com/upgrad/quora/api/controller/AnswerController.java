@@ -1,11 +1,10 @@
 package com.upgrad.quora.api.controller;
 
-import com.upgrad.quora.api.model.AnswerEditRequest;
-import com.upgrad.quora.api.model.AnswerRequest;
-import com.upgrad.quora.api.model.AnswerResponse;
+import com.upgrad.quora.api.model.*;
 import com.upgrad.quora.service.business.AnswerService;
 import com.upgrad.quora.service.business.CommonService;
 import com.upgrad.quora.service.common.AnswerCreationErrorCode;
+import com.upgrad.quora.service.common.AnswerDeleteErrorCode;
 import com.upgrad.quora.service.common.AnswerEditErrorCode;
 import com.upgrad.quora.service.common.AuthErrorCode;
 import com.upgrad.quora.service.entity.AnswerEntity;
@@ -34,7 +33,7 @@ public class AnswerController {
     /**
      * Endpoint for create answer for particular question
      * @param questionId
-     * @param authorization
+     * @param accessToken
      * @param answerRequest
      * @return AnswerResponse
      * @throws InvalidQuestionException
@@ -43,18 +42,9 @@ public class AnswerController {
      */
     @RequestMapping(method = RequestMethod.POST, path = "/question/{questionId}/answer/create", consumes = MediaType.APPLICATION_JSON_UTF8_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<AnswerResponse> createAnswer(@PathVariable("questionId") final String questionId,
-                                                           @RequestHeader("authorization") final String authorization, AnswerRequest answerRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException {
-        UserAuthEntity userAuth = null;
-        try {
-            // Verify 'authorization' in header is valid or not, if not valid it will throw exception
-            userAuth = commonService.validateUser(authorization);
-        } catch (AuthorizationFailedException authorizationFailedException) {
-            // Use existing exception and modify the message as per the requirement
-            if ( authorizationFailedException.getCode().equals(AuthErrorCode.ATHR_002_RELOGIN_PROMPT.getCode())){
-                throw new AuthorizationFailedException(AnswerCreationErrorCode.ATHR_002.getCode(), AnswerCreationErrorCode.ATHR_002.getDefaultMessage());
-            }
-            throw authorizationFailedException;
-        }
+                                                           @RequestHeader("authorization") final String accessToken, AnswerRequest answerRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException {
+
+        UserAuthEntity userAuth = checkForAuthorization(accessToken, AnswerCreationErrorCode.ATHR_002.getCode(), AnswerCreationErrorCode.ATHR_002.getDefaultMessage());
 
         AnswerEntity answerEntity = new AnswerEntity();
         answerEntity.setAnswer(answerRequest.getAnswer());
@@ -77,18 +67,9 @@ public class AnswerController {
 
     @RequestMapping(method = RequestMethod.PUT, path = "/answer/edit/{answerId}", consumes = MediaType.APPLICATION_JSON_UTF8_VALUE, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
     public ResponseEntity<AnswerResponse> editAnswer(@PathVariable("answerId") final String answerId,
-                                                       @RequestHeader("authorization") final String authorization, AnswerEditRequest answerEditRequest) throws InvalidQuestionException, AuthorizationFailedException, SignUpRestrictedException, AnswerNotFoundException {
-        UserAuthEntity userAuth = null;
-        try {
-            // Verify 'authorization' in header is valid or not, if not valid it will throw exception
-            userAuth = commonService.validateUser(authorization);
-        } catch (AuthorizationFailedException authorizationFailedException) {
-            // Use existing exception and modify the message as per the requirement
-            if ( authorizationFailedException.getCode().equals(AuthErrorCode.ATHR_002_RELOGIN_PROMPT.getCode())){
-                throw new AuthorizationFailedException(AnswerEditErrorCode.ATHR_002.getCode(), AnswerEditErrorCode.ATHR_002.getDefaultMessage());
-            }
-            throw authorizationFailedException;
-        }
+                                                       @RequestHeader("authorization") final String accessToken, AnswerEditRequest answerEditRequest) throws AuthorizationFailedException, AnswerNotFoundException {
+
+        UserAuthEntity userAuth = checkForAuthorization(accessToken, AnswerEditErrorCode.ATHR_002.getCode(), AnswerEditErrorCode.ATHR_002.getDefaultMessage());
 
         AnswerEntity answerEntity = new AnswerEntity();
         answerEntity.setAnswer(answerEditRequest.getContent());
@@ -104,23 +85,65 @@ public class AnswerController {
         return new ResponseEntity<AnswerResponse>(answerResponse, HttpStatus.CREATED);
     }
 
+    @RequestMapping(method = RequestMethod.DELETE, path = "/answer/delete/{answerId}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+    public ResponseEntity<AnswerDeleteResponse> deleteUser(@PathVariable("answerId") String answerId,
+                                                                              @RequestHeader("authorization") final String accessToken) throws AuthorizationFailedException, UserNotFoundException, AnswerNotFoundException {
+
+        UserAuthEntity userAuth = checkForAuthorization(accessToken, AnswerDeleteErrorCode.ATHR_002.getCode(), AnswerDeleteErrorCode.ATHR_002.getDefaultMessage());
+
+        AnswerEntity answerEntity = answerService.deleteAnswer(answerId, userAuth.getUserEntity());
+
+        AnswerDeleteResponse answerDeleteResponse =
+                new AnswerDeleteResponse().id(answerEntity.getUuid()).status("ANSWER DELETED");
+
+        return new ResponseEntity<AnswerDeleteResponse>(answerDeleteResponse, HttpStatus.OK);
+    }
+
     /**
      *
-     * @param questionUuid
-     * @param authorization
+     * @param questionId
+     * @param accessToken
      * @return
      * @throws AuthorizationFailedException
      * @throws UserNotFoundException
+     * @throws InvalidQuestionException
      */
     @RequestMapping(method = RequestMethod.GET, path = "/answer/all/{questionId}", produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<List<AnswerResponse>> getAllAnswersToQuestion (@PathVariable("questionId") final String questionUuid,
-            @RequestHeader("authorization") final String authorization) throws AuthorizationFailedException, UserNotFoundException {
+    public ResponseEntity<List<AnswerDetailsResponse>> getAllAnswersToQuestion (@PathVariable("questionId") final String questionId,
+            @RequestHeader("authorization") final String accessToken) throws AuthorizationFailedException, UserNotFoundException, InvalidQuestionException {
 
-        // Verify 'authorization' in header is valid or not, if not valid it will throw exception
-        UserAuthEntity userAuth = commonService.validateUser(authorization);
+        UserAuthEntity userAuth = checkForAuthorization(accessToken, AnswerDeleteErrorCode.ATHR_002.getCode(), AnswerDeleteErrorCode.ATHR_002.getDefaultMessage());
 
-        List<AnswerResponse> allAnswers = new ArrayList<>();
+        // Set UUID of question using input questionId
+        QuestionEntity questionEntity = new QuestionEntity();
+        questionEntity.setUuid(questionId);
+        questionEntity.setUserEntity(userAuth.getUserEntity());
 
-        return new ResponseEntity<List<AnswerResponse>>(allAnswers, HttpStatus.OK);
+        List<AnswerEntity> allAnswerEntity = answerService.getAllAnswer(questionEntity);
+
+        List<AnswerDetailsResponse> allAnswers = new ArrayList<>();
+        for (AnswerEntity answerEntity: allAnswerEntity){
+            AnswerDetailsResponse answerResponse = new AnswerDetailsResponse();
+            answerResponse.setId(answerEntity.getUuid());
+            answerResponse.setAnswerContent(answerEntity.getAnswer());
+            answerResponse.setQuestionContent(answerEntity.getQuestionEntity().getContent());
+            allAnswers.add(answerResponse);
+        }
+
+
+        return new ResponseEntity<>(allAnswers, HttpStatus.OK);
+    }
+
+    private UserAuthEntity checkForAuthorization(String accessToken, String errorCode, String defaultMessage) throws AuthorizationFailedException {
+        try {
+            // Verify 'authorization' in header is valid or not, if not valid it will throw exception
+            return commonService.validateUser(accessToken);
+        } catch (AuthorizationFailedException authorizationFailedException) {
+            // Use existing exception and modify the message as per the requirement
+            if ( authorizationFailedException.getCode().equals(AuthErrorCode.ATHR_002_RELOGIN_PROMPT.getCode())){
+                throw new AuthorizationFailedException(errorCode, defaultMessage);
+            }
+            throw authorizationFailedException;
+        }
     }
 }

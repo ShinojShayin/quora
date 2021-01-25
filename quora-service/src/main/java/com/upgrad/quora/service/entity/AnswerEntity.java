@@ -15,8 +15,14 @@ import java.time.ZonedDateTime;
 @Table(name = "answer")
 @NamedQueries({
         @NamedQuery(name = "answerByUuid", query = "select a from AnswerEntity a where a.uuid = :uuid"),
-    }
+        @NamedQuery(
+                name = "answerByQuestionId",
+                query = "SELECT a From AnswerEntity a LEFT JOIN QuestionEntity q ON a.questionEntity = q WHERE q.id= :questionId "
+        )
+//      @NamedQuery(name = "answerByQuestionId", query = "SELECT a FROM AnswerEntity a, QuestionEntity q WHERE a.questionEntity = q AND q.id = :questionId" ),
+}
 )
+
 public class AnswerEntity implements Serializable {
 
     @Id
