@@ -1,7 +1,5 @@
 package com.upgrad.quora.service.entity;
 
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -13,9 +11,12 @@ import java.time.ZonedDateTime;
 
 @Entity
 @Table(name = "question")
-@NamedQueries({
-                @NamedQuery(name = "questionByUuid", query = "select q from QuestionEntity q where q.uuid = :uuid"),
-    }
+@NamedQueries(
+        {
+                @NamedQuery(name = "questionByUuid", query = "select u from QuestionEntity u where u.uuid = :uuid"),
+                @NamedQuery(name = "getAllQuestions", query = "select u from QuestionEntity u"),
+                @NamedQuery(name = "getAllQuestionsById", query = "select u from QuestionEntity u where u.userEntity=:uuid"),
+        }
 )
 public class QuestionEntity implements Serializable {
 
@@ -25,42 +26,30 @@ public class QuestionEntity implements Serializable {
     private Integer id;
 
     @Column(name = "uuid")
+    @NotNull
     @Size(max = 200)
-    @NotNull
     private String uuid;
-
-    @Column(name = "content")
-    @NotNull
-    private String content;
-
-    @Column(name = "date")
-    @NotNull
-    private ZonedDateTime date;
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id")
     private UserEntity userEntity;
 
-    @Override
-    public boolean equals(Object obj) {
-        return new EqualsBuilder().append(this, obj).isEquals();
+    @Column(name = "content")
+    @NotNull
+    @Size(max = 500)
+    private String content;
+
+    @Column(name = "date")
+    @NotNull
+    private ZonedDateTime date;
+
+    public UserEntity getUserEntity() {
+        return userEntity;
     }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder().append(this).hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return "QuestionEntity{" +
-                "id=" + id +
-                ", uuid='" + uuid + '\'' +
-                ", content='" + content + '\'' +
-                ", date='" + date + '\'' +
-                ", userEntity=" + userEntity +
-                '}';
+    public void setUserEntity(UserEntity userEntity) {
+        this.userEntity = userEntity;
     }
 
     public Integer getId() {
@@ -95,11 +84,6 @@ public class QuestionEntity implements Serializable {
         this.date = date;
     }
 
-    public UserEntity getUserEntity() {
-        return userEntity;
-    }
 
-    public void setUserEntity(UserEntity userEntity) {
-        this.userEntity = userEntity;
-    }
 }
+

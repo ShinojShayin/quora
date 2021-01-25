@@ -38,15 +38,14 @@ public class AdminService {
         if (userAuthEntity == null)
             throw new AuthorizationFailedException(AuthErrorCode.ATHR_001.getCode(), AuthErrorCode.ATHR_001.getDefaultMessage());
 
-        if (!userAuthEntity.getUserEntity().getRole().equals(UserRole.ADMIN.getName()))
-            throw new AuthorizationFailedException(AuthErrorCode.ATHR_003.getCode(), AuthErrorCode.ATHR_003.getDefaultMessage());
-
         ZonedDateTime logoutAt = userAuthEntity.getLogoutAt();
 
         // if logoutAt is not null then it means user has signed out.
-        if(logoutAt!=null){
+        if(logoutAt!=null)
             throw new AuthorizationFailedException(AuthErrorCode.ATHR_002.getCode(), AuthErrorCode.ATHR_002.getDefaultMessage());
-        }
+
+        if (!userAuthEntity.getUserEntity().getRole().equals(UserRole.ADMIN.getName()))
+            throw new AuthorizationFailedException(AuthErrorCode.ATHR_003.getCode(), AuthErrorCode.ATHR_003.getDefaultMessage());
         else{
             return userAuthEntity;
         }
