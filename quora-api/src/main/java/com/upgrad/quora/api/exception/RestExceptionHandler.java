@@ -83,7 +83,7 @@ public class RestExceptionHandler {
     public ResponseEntity<ErrorResponse> authorizationFailedException(
                     SignOutRestrictedException exception, WebRequest request) {
         return new ResponseEntity<ErrorResponse>(new ErrorResponse().code(exception.getCode()).message(exception.getErrorMessage()).rootCause(getClassName(exception.toString())),
-                HttpStatus.FORBIDDEN);
+                HttpStatus.UNAUTHORIZED);
     }
 
     /**
@@ -125,7 +125,7 @@ public class RestExceptionHandler {
     public ResponseEntity<ErrorResponse> constraintViolationException(
             ConstraintViolationException exception, WebRequest request) {
         return new ResponseEntity<ErrorResponse>(new ErrorResponse().code(DatabaseErrorCode.DB_001.getCode()).message(DatabaseErrorCode.DB_001.getDefaultMessage()).rootCause(exception.getMessage()),
-                HttpStatus.NOT_FOUND);
+                HttpStatus.CONFLICT);
     }
 
     /**
