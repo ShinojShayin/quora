@@ -1,30 +1,23 @@
 package com.upgrad.quora.service.dao;
 
 import com.upgrad.quora.service.entity.QuestionEntity;
+import com.upgrad.quora.service.entity.UserEntity;
+import com.upgrad.quora.service.exception.InvalidQuestionException;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceContext;
+import java.util.List;
+
 
 @Repository
 public class QuestionDao {
-
     @PersistenceContext
     private EntityManager entityManager;
 
-    /**
-     * This method will save/insert all data in questionEntity object to database.
-     *
-     * @param questionEntity
-     * @return QuestionEntity
-     */
-    public QuestionEntity createUser(QuestionEntity questionEntity) {
-        entityManager.persist(questionEntity);
-        return questionEntity;
-    }
 
-    public QuestionEntity getQuestionByUuid(String questionId) {
+    public QuestionEntity getQuestionById(final String questionId) {
         QuestionEntity questionEntity = null;
 
         try {
@@ -34,10 +27,60 @@ public class QuestionDao {
                     .getSingleResult();
 
         } catch (NoResultException e) {
-            System.err.println(e.toString());
+            System.out.println(e.toString());
         }
 
         return questionEntity;
     }
 
+    public QuestionEntity createQuestion(QuestionEntity questionEntity) {
+        entityManager.persist(questionEntity);
+        return questionEntity;
+    }
+
+    public QuestionEntity deleteQuestion(QuestionEntity questionEntity) throws InvalidQuestionException {
+
+        entityManager.remove(questionEntity);
+        return questionEntity;
+    }
+
+
+    public List<QuestionEntity> getAllQuestions() {
+        List<QuestionEntity> questionEntity = null;
+
+        try {
+            questionEntity = entityManager
+                    .createNamedQuery("getAllQuestions", QuestionEntity.class)
+                    .getResultList();
+
+        } catch (NoResultException e) {
+            System.out.println(e.toString());
+        }
+
+        return questionEntity;
+
+    }
+
+    public List<QuestionEntity> getAllQuestionsbyUser(final UserEntity userEntity) {
+        List<QuestionEntity> questionEntity = null;
+
+        try {
+            questionEntity = entityManager
+                    .createNamedQuery("getAllQuestionByUser", QuestionEntity.class)
+                    .setParameter("user", userEntity)
+                    .getResultList();
+
+        } catch (NoResultException e) {
+            System.out.println(e.toString());
+        }
+
+        return questionEntity;
+
+    }
+
+    public QuestionEntity editQuestion(QuestionEntity questionEntity) {
+        entityManager.merge(questionEntity);
+        return questionEntity;
+
+    }
 }
